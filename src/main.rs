@@ -2,7 +2,7 @@ use std::fmt;
 use std::str::FromStr;
 use std::num::ParseIntError;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 enum Opcode {
     Accumulate,
     Jump,
@@ -21,7 +21,7 @@ impl fmt::Display for Opcode {
         write!(f, "{}", str_rep)
     }
 }
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
 struct Instruction {
     opcode: Opcode,
     value: isize,
@@ -52,29 +52,49 @@ impl FromStr for Instruction {
 }
 
 fn main() {
-    let program: Vec<Instruction> = include_str!("input")
+    let base_program: Vec<Instruction> = include_str!("input")
         .split('\n')
         .map(|inst| Instruction::from_str(inst).unwrap())
         .collect();
 
-    let mut exec_path: Vec<usize> = Default::default();
-    let mut acc: isize = 0;
-    let mut ip: usize = 0;
-
-    while !(exec_path.contains(&ip)) {
-        let inst = &program[ip];
-        exec_path.push(ip);
+    let mut programs: Vec<Vec<Instruction>> = vec![];
+    for (idx, inst) in base_program.iter().enumerate() {
+        let mut new_inst: Instruction = Instruction{ opcode: Opcode::Invalid, value: 0 };
         match inst.opcode {
-            Opcode::NoOp => ip += 1,
-            Opcode::Jump => ip  = (ip as isize + inst.value) as usize,
-            Opcode::Accumulate => { acc += inst.value; ip += 1 },
+            Opcode::NoOp => new_inst = Instruction{ opcode: Opcode::Jump, value: inst.value },
+            Opcode::Jump => new_inst = Instruction{ opcode: Opcode::NoOp, value: inst.value },
+            Opcode::Accumulate => continue,
             Opcode::Invalid => panic!("Invalid OpCode")
         }
-        if ip > program.len() {
-            dbg!(exec_path);
-            dbg!(&program[ip], ip, acc);
-            break
-        }
+        let mut new_program: Vec<Instruction> = base_program.to_vec();
+        new_program[idx] = new_inst;
+        programs.push(new_program);
     }
 
+    for program in programs {
+        let mut exec_path: Vec<usize> = Default::default();
+        let mut acc: isize = 0;
+        let mut ip: usize = 0;
+
+        while !(exec_path.contains(&ip)) {
+            let inst = &program[ip];
+            exec_path.push(ip);
+            match inst.opcode {
+                Opcode::NoOp => ip += 1,
+                Opcode::Jump => ip = (ip as isize + inst.value) as usize,
+                Opcode::Accumulate => {
+                    acc += inst.value;
+                    ip += 1
+                },
+                Opcode::Invalid => panic!("Invalid OpCode")
+            }
+            if ip >= program.len() {
+                dbg!(exec_path);
+                dbg!(ip);
+                dbg!(acc);
+                // dbg!(&program[ip], ip, acc);
+                break
+            }
+        }
+    }
 }
