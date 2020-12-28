@@ -1,100 +1,48 @@
-use std::fmt;
-use std::str::FromStr;
-use std::num::ParseIntError;
+use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
-enum Opcode {
-    Accumulate,
-    Jump,
-    NoOp,
-    Invalid
-}
+type Bag = (String, String);
 
-impl fmt::Display for Opcode {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let str_rep = match self {
-            Opcode::Accumulate => "Accumulate",
-            Opcode::Jump => "Jump",
-            Opcode::NoOp => "No Operation",
-            Opcode::Invalid => "Invalid Operation"
-        };
-        write!(f, "{}", str_rep)
+fn recurse_for_gold(rules: &HashMap<Bag, Vec<(usize, Bag)>>, bag: &Bag, acc: &mut HashSet<Bag>) -> bool {
+    let mut contains_gold: bool = false;
+
+    for (_number, bag_in) in rules.get(bag).unwrap() {
+        if *bag_in == ("shiny".to_string(), "gold".to_string()) || recurse_for_gold(rules, bag_in, acc) {
+            acc.insert(bag.clone());
+            contains_gold = true;
+        }
     }
-}
-#[derive(Debug, Eq, PartialEq, Copy, Clone)]
-struct Instruction {
-    opcode: Opcode,
-    value: isize,
-}
-
-impl fmt::Display for Instruction {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {}", self.opcode, self.value)
-    }
-}
-
-impl FromStr for Instruction {
-    type Err = ParseIntError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let s_parts: Vec<&str> = s.split_whitespace().collect();
-        let opcode = match s_parts[0] {
-            "jmp" => Opcode::Jump,
-            "acc" => Opcode::Accumulate,
-            "nop" => Opcode::NoOp,
-            _ => Opcode::Invalid
-        };
-
-        let value = s_parts[1].parse::<isize>()?;
-
-        Ok(Instruction{ opcode, value })
-    }
+    contains_gold
 }
 
 fn main() {
-    let base_program: Vec<Instruction> = include_str!("input")
+    let rules: HashMap<Bag, Vec<(usize, Bag)>> = include_str!("input")
         .split('\n')
-        .map(|inst| Instruction::from_str(inst).unwrap())
+        .map(|rule| {
+            let rules_s: Vec<&str> = rule.split_whitespace().collect();
+            let container: Bag = (rules_s[0].to_string(), rules_s[1].to_string());
+
+            let subs: Vec<(usize, Bag)> = if rule.contains("no other bags.") {
+                vec![]
+            } else {
+                rule.split("contain")
+                    .collect::<Vec<&str>>()
+                    [1]
+                    .replace('.', " ")
+                    .split(", ")
+                    .map(|bag| {
+                        let bag_s: Vec<&str> = bag.trim().split(' ').collect();
+                        (bag_s[0].parse::<usize>().unwrap(), (bag_s[1].to_string(), bag_s[2].to_string()))
+                    })
+                    .collect()
+            };
+            (container, subs)
+        })
         .collect();
 
-    let mut programs: Vec<Vec<Instruction>> = vec![];
-    for (idx, inst) in base_program.iter().enumerate() {
-        let mut new_inst: Instruction = Instruction{ opcode: Opcode::Invalid, value: 0 };
-        match inst.opcode {
-            Opcode::NoOp => new_inst = Instruction{ opcode: Opcode::Jump, value: inst.value },
-            Opcode::Jump => new_inst = Instruction{ opcode: Opcode::NoOp, value: inst.value },
-            Opcode::Accumulate => continue,
-            Opcode::Invalid => panic!("Invalid OpCode")
-        }
-        let mut new_program: Vec<Instruction> = base_program.to_vec();
-        new_program[idx] = new_inst;
-        programs.push(new_program);
+    let mut acc: HashSet<Bag> = HashSet::new();
+    for bag in rules.keys() {
+        recurse_for_gold(&rules, &bag, &mut acc);
     }
+    dbg!(acc.len(), rules.len());
 
-    for program in programs {
-        let mut exec_path: Vec<usize> = Default::default();
-        let mut acc: isize = 0;
-        let mut ip: usize = 0;
-
-        while !(exec_path.contains(&ip)) {
-            let inst = &program[ip];
-            exec_path.push(ip);
-            match inst.opcode {
-                Opcode::NoOp => ip += 1,
-                Opcode::Jump => ip = (ip as isize + inst.value) as usize,
-                Opcode::Accumulate => {
-                    acc += inst.value;
-                    ip += 1
-                },
-                Opcode::Invalid => panic!("Invalid OpCode")
-            }
-            if ip >= program.len() {
-                dbg!(exec_path);
-                dbg!(ip);
-                dbg!(acc);
-                // dbg!(&program[ip], ip, acc);
-                break
-            }
-        }
-    }
 }
