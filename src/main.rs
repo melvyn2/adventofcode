@@ -1,54 +1,30 @@
-use std::collections::{HashMap, HashSet};
-
-type Bag = (String, String);
-
-fn recurse_for_gold(rules: &HashMap<Bag, Vec<(usize, Bag)>>, bag: &Bag, acc: &mut HashSet<Bag>) -> bool {
-    let mut contains_gold: bool = false;
-
-    for (_number, bag_in) in rules.get(bag).unwrap() {
-        if *bag_in == ("shiny".to_string(), "gold".to_string()) || recurse_for_gold(rules, bag_in, acc) {
-            acc.insert(bag.clone());
-            contains_gold = true;
-        }
-    }
-    contains_gold
-}
-
-fn count_bags(rules: &HashMap<Bag, Vec<(usize, Bag)>>, bag: &Bag) -> usize {
-    let mut acc: usize = 0;
-
-    for (number, bag_in) in rules.get(bag).unwrap() {
-        acc += number * count_bags(rules, bag_in);
-    };
-
-    acc + 1
-}
+use std::convert::TryInto;
 
 fn main() {
-    let rules: HashMap<Bag, Vec<(usize, Bag)>> = include_str!("input")
+    let numbers: Vec<usize> = include_str!("input")
         .split('\n')
-        .map(|rule| {
-            let rules_s: Vec<&str> = rule.split_whitespace().collect();
-            let container: Bag = (rules_s[0].to_string(), rules_s[1].to_string());
-
-            let subs: Vec<(usize, Bag)> = if rule.contains("no other bags.") {
-                vec![]
-            } else {
-                rule.split("contain")
-                    .collect::<Vec<&str>>()
-                    [1]
-                    .replace('.', " ")
-                    .split(", ")
-                    .map(|bag| {
-                        let bag_s: Vec<&str> = bag.trim().split(' ').collect();
-                        (bag_s[0].parse::<usize>().unwrap(), (bag_s[1].to_string(), bag_s[2].to_string()))
-                    })
-                    .collect()
-            };
-            (container, subs)
-        })
+        .map( |num| num.parse::<usize>().unwrap() )
         .collect();
 
-    dbg!(count_bags(&rules, &("shiny".to_string(), "gold".to_string())) - 1);
+    for idx in 0..numbers.len()-25 {
+        let preamble:  &[usize] = &numbers[idx..idx+25];
+        let num: usize = numbers[idx+25];
+        assert_eq!(&preamble.len(), &25usize);
+        let mut is_sum: bool = false;
+        'first: for first in preamble.iter() {
+            for second in preamble.iter() {
+                if first == second {
+                    continue
+                }
+                if num == first + second {
+                    is_sum = true;
+                    break 'first
+                }
+            }
+        }
+        if !is_sum {
+            dbg!(num);
+        }
+    }
 
 }
