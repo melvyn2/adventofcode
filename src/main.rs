@@ -14,6 +14,16 @@ fn recurse_for_gold(rules: &HashMap<Bag, Vec<(usize, Bag)>>, bag: &Bag, acc: &mu
     contains_gold
 }
 
+fn count_bags(rules: &HashMap<Bag, Vec<(usize, Bag)>>, bag: &Bag) -> usize {
+    let mut acc: usize = 0;
+
+    for (number, bag_in) in rules.get(bag).unwrap() {
+        acc += number * count_bags(rules, bag_in);
+    };
+
+    acc + 1
+}
+
 fn main() {
     let rules: HashMap<Bag, Vec<(usize, Bag)>> = include_str!("input")
         .split('\n')
@@ -39,10 +49,6 @@ fn main() {
         })
         .collect();
 
-    let mut acc: HashSet<Bag> = HashSet::new();
-    for bag in rules.keys() {
-        recurse_for_gold(&rules, &bag, &mut acc);
-    }
-    dbg!(acc.len(), rules.len());
+    dbg!(count_bags(&rules, &("shiny".to_string(), "gold".to_string())) - 1);
 
 }
