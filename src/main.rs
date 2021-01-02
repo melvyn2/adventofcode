@@ -19,21 +19,31 @@ fn main() {
                 match space {
                     b'.' => continue,
                     b'L' => {
-                        for (xoff, yoff) in &[(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)] {
-                            if (y as isize + yoff) < 0 || (y as isize + yoff) >= seats_now.len() as isize { continue }
-                            if (x as isize + xoff) < 0 || (x as isize + xoff) >= seats_now[y].len() as isize { continue }
-                            if seats_now[(y as isize + yoff) as usize][(x as isize + xoff) as usize] == b'#' { continue 'x }
+                        for (xslope, yslope) in &[(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)] {
+                            for a in 1..100 {
+                                let xoff = xslope * a;
+                                let yoff = yslope * a;
+                                if (y as isize + yoff) < 0 || (y as isize + yoff) >= seats_now.len() as isize { continue }
+                                if (x as isize + xoff) < 0 || (x as isize + xoff) >= seats_now[y].len() as isize { continue }
+                                if seats_now[(y as isize + yoff) as usize][(x as isize + xoff) as usize] == b'#' { continue 'x }
+                                if seats_now[(y as isize + yoff) as usize][(x as isize + xoff) as usize] == b'L' { break }
+                            }
                         }
                         seats_next[y][x] = b'#';
                     },
                     b'#' => {
                         let mut adj_occ: usize = 0;
-                        for (xoff, yoff) in &[(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)] {
-                            if (y as isize + yoff) < 0 || (y as isize + yoff) >= seats_now.len() as isize { continue }
-                            if (x as isize + xoff) < 0 || (x as isize + xoff) >= seats_now[y].len() as isize { continue }
-                            if seats_now[(y as isize + yoff) as usize][(x as isize + xoff) as usize] == b'#' { adj_occ += 1 }
+                        for (xslope, yslope) in &[(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)] {
+                            for a in 1..100 {
+                                let xoff = xslope * a;
+                                let yoff = yslope * a;
+                                if (y as isize + yoff) < 0 || (y as isize + yoff) >= seats_now.len() as isize { continue }
+                                if (x as isize + xoff) < 0 || (x as isize + xoff) >= seats_now[y].len() as isize { continue }
+                                if seats_now[(y as isize + yoff) as usize][(x as isize + xoff) as usize] == b'#' { adj_occ += 1; break }
+                                if seats_now[(y as isize + yoff) as usize][(x as isize + xoff) as usize] == b'L' { break }
+                            }
                         }
-                        if adj_occ >= 4 {
+                        if adj_occ >= 5 {
                             seats_next[y][x] = b'L';
                         }
                     },
