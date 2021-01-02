@@ -1,26 +1,56 @@
 fn main() {
-    let mut adapters: Vec<usize> = include_str!("input")
-        .split('\n')
-        .map( |num| num.parse::<usize>().unwrap() )
+    let mut seats_now: Vec<Vec<u8>> = include_str!("input")
+        .lines()
+        .map( |line| line.as_bytes().to_vec() )
         .collect();
-    adapters.sort_unstable();
-    let adapters = adapters;
 
-    let device_rating: usize = adapters.iter().max().unwrap() + 3;
-    dbg!(&adapters, device_rating);
+    let mut seats_next = seats_now.clone();
 
-    let mut ch1: usize = 0;
-    let mut ch3: usize = 0;
-    for (idx, adapter) in adapters.iter().enumerate() {
-        if idx == 0 { continue }
-        let change = adapter - adapters[idx-1];
-        if change == 3 {
-            ch3 += 1;
-        } else if change == 1 {
-            ch1 += 1;
-        } else {
-            panic!(change);
+    for y in 0..seats_now.len() {
+        for x in 0..seats_now.len() {
+            assert_eq!(seats_now[y][x], seats_next[y][x]);
         }
     }
-    dbg!(ch1, ch3, (ch1 + 1) * (ch3 + 1));
+
+    loop {
+        for y in 0..seats_now.len() {
+            'x: for (x, space) in seats_now[y].iter().enumerate() {
+                // if x + y == 0 { unsafe { breakpoint(); } }
+                match space {
+                    b'.' => continue,
+                    b'L' => {
+                        for (xoff, yoff) in &[(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)] {
+                            if (y as isize + yoff) < 0 || (y as isize + yoff) >= seats_now.len() as isize { continue }
+                            if (x as isize + xoff) < 0 || (x as isize + xoff) >= seats_now[y].len() as isize { continue }
+                            if seats_now[(y as isize + yoff) as usize][(x as isize + xoff) as usize] == b'#' { continue 'x }
+                        }
+                        seats_next[y][x] = b'#';
+                    },
+                    b'#' => {
+                        let mut adj_occ: usize = 0;
+                        for (xoff, yoff) in &[(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)] {
+                            if (y as isize + yoff) < 0 || (y as isize + yoff) >= seats_now.len() as isize { continue }
+                            if (x as isize + xoff) < 0 || (x as isize + xoff) >= seats_now[y].len() as isize { continue }
+                            if seats_now[(y as isize + yoff) as usize][(x as isize + xoff) as usize] == b'#' { adj_occ += 1 }
+                        }
+                        if adj_occ >= 4 {
+                            seats_next[y][x] = b'L';
+                        }
+                    },
+                    _ => panic!("invalid seat {} at {}, {}", *space as char, x, y)
+                }
+            }
+            print!("{}      ", seats_now[y].iter().zip(seats_next[y].iter()).filter(|&(a, b)| a != b).count());
+            println!("{}        {}", std::str::from_utf8(&*seats_now[y]).unwrap(), std::str::from_utf8(&*seats_next[y]).unwrap());
+        }
+        println!("\n");
+        if seats_now == seats_next { break }
+        seats_now = seats_next.clone();
+        // sleep(Duration::from_secs(1));
+    }
+
+    let total_occupied: usize = seats_now.iter().fold(0, |acc, row | {
+       row.iter().filter(|seat| **seat == b'#').count() + acc
+    });
+    dbg!(total_occupied);
 }
