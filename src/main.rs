@@ -1,31 +1,16 @@
-extern crate rayon;
-use rayon::prelude::*;
+extern crate ring_algorithm;
+use ring_algorithm::chinese_remainder_theorem;
 
 fn main() {
     let mut lines = include_str!("input").lines();
-    let buses: Vec<usize> = lines
+    let (idx, buses): (Vec<isize>, Vec<isize>) = lines
         .nth(1)
         .unwrap()
         .split(',')
-        .map(|s| s.parse::<usize>().unwrap_or(0))
-        .collect();
+        .enumerate()
+        .filter(|(_, x)| *x != "x")
+        .map(|(i, s)| (i as isize, s.parse::<isize>().unwrap()))
+        .unzip();
 
-    let max_bus: &usize = buses.iter().max().unwrap();
-    let max_bus_offset: usize = buses.iter().position(|x| x == max_bus).unwrap();
-
-    let res: usize = (1..10000000000000000usize)
-        .into_par_iter()
-        .find_first(|x| {
-            let ts_try = (x * max_bus) - max_bus_offset;
-            let mut is_valid = true;
-            for (idx, bus) in buses.iter().enumerate() {
-                if *bus != 0 && (ts_try + idx) % bus != 0 {
-                    is_valid = false;
-                    break;
-                }
-            }
-            is_valid
-        })
-        .unwrap();
-    dbg!((res * max_bus) - max_bus_offset);
+    dbg!(chinese_remainder_theorem(&idx, &buses));
 }
