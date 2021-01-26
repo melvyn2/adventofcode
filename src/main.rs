@@ -1,21 +1,25 @@
-use std::collections::HashMap;
-
 fn main() {
     let mut lines = include_str!("input").lines();
-    let ts: usize = lines.next().unwrap().parse().unwrap();
-    let buses: HashMap<usize, usize> = lines
-        .next()
+    let buses: Vec<usize> = lines
+        .nth(1)
         .unwrap()
         .split(',')
-        .filter(|&x| x != "x")
-        .map(|s| {
-            let id = s.parse::<usize>().unwrap();
-            let mut cycle = id;
-            while cycle < ts {
-                cycle += id;
-            }
-            (cycle, id)
-        })
+        .map(|s| s.parse::<usize>().unwrap_or(0))
         .collect();
-    dbg!(buses.get(buses.keys().min().unwrap()).unwrap() * (buses.keys().min().unwrap() - ts));
+
+    let max_bus: &usize = buses.iter().max().unwrap();
+    let max_bus_offset: usize = buses.iter().position(|x| x == max_bus).unwrap();
+
+    'outer: for ts_mult in 10000000000..10000000000000000 {
+        print!("\r{}", ts_mult as f64 / 10000000000000000f64);
+        let ts_try = (ts_mult * max_bus) - max_bus_offset;
+        for (idx, bus) in buses.iter().enumerate() {
+            if *bus != 0 && (ts_try + idx) % bus != 0 {
+                continue 'outer;
+            }
+        }
+        dbg!(buses);
+        dbg!(ts_try);
+        break;
+    }
 }
