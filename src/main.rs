@@ -1,66 +1,87 @@
+#![feature(destructuring_assignment)]
+use std::num::ParseIntError;
+use std::str::FromStr;
+
+enum Direction {
+    North,
+    East,
+    South,
+    West,
+    Right,
+    Left,
+    Forward,
+}
+
+struct Instruction {
+    direction: Direction,
+    value: isize,
+}
+
+impl FromStr for Instruction {
+    type Err = ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let direction: Direction = match s.chars().next().unwrap() {
+            'N' => Direction::North,
+            'E' => Direction::East,
+            'S' => Direction::South,
+            'W' => Direction::West,
+            'L' => Direction::Left,
+            'R' => Direction::Right,
+            'F' => Direction::Forward,
+            _ => unreachable!(),
+        };
+
+        let value = s.chars().skip(1).collect::<String>().parse::<usize>()? as isize;
+
+        Ok(Instruction { direction, value })
+    }
+}
+
 fn main() {
-    let mut seats_now: Vec<Vec<u8>> = include_str!("input")
+    let instructions: Vec<Instruction> = include_str!("input")
         .lines()
-        .map( |line| line.as_bytes().to_vec() )
+        .map(|line| Instruction::from_str(line).unwrap())
         .collect();
 
-    let mut seats_next = seats_now.clone();
+    let mut ns_wp: isize = 1; // +North/-South
+    let mut ew_wp: isize = 10; // +East/-West
+    let mut ns_sp: isize = 0; // ship
+    let mut ew_sp: isize = 0;
 
-    for y in 0..seats_now.len() {
-        for x in 0..seats_now.len() {
-            assert_eq!(seats_now[y][x], seats_next[y][x]);
-        }
-    }
-
-    loop {
-        for y in 0..seats_now.len() {
-            'x: for (x, space) in seats_now[y].iter().enumerate() {
-                // if x + y == 0 { unsafe { breakpoint(); } }
-                match space {
-                    b'.' => continue,
-                    b'L' => {
-                        for (xslope, yslope) in &[(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)] {
-                            for a in 1..100 {
-                                let xoff = xslope * a;
-                                let yoff = yslope * a;
-                                if (y as isize + yoff) < 0 || (y as isize + yoff) >= seats_now.len() as isize { continue }
-                                if (x as isize + xoff) < 0 || (x as isize + xoff) >= seats_now[y].len() as isize { continue }
-                                if seats_now[(y as isize + yoff) as usize][(x as isize + xoff) as usize] == b'#' { continue 'x }
-                                if seats_now[(y as isize + yoff) as usize][(x as isize + xoff) as usize] == b'L' { break }
-                            }
-                        }
-                        seats_next[y][x] = b'#';
-                    },
-                    b'#' => {
-                        let mut adj_occ: usize = 0;
-                        for (xslope, yslope) in &[(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)] {
-                            for a in 1..100 {
-                                let xoff = xslope * a;
-                                let yoff = yslope * a;
-                                if (y as isize + yoff) < 0 || (y as isize + yoff) >= seats_now.len() as isize { continue }
-                                if (x as isize + xoff) < 0 || (x as isize + xoff) >= seats_now[y].len() as isize { continue }
-                                if seats_now[(y as isize + yoff) as usize][(x as isize + xoff) as usize] == b'#' { adj_occ += 1; break }
-                                if seats_now[(y as isize + yoff) as usize][(x as isize + xoff) as usize] == b'L' { break }
-                            }
-                        }
-                        if adj_occ >= 5 {
-                            seats_next[y][x] = b'L';
-                        }
-                    },
-                    _ => panic!("invalid seat {} at {}, {}", *space as char, x, y)
+    for ins in instructions {
+        println!(
+            "Ship: {}, {}\nWaypoint: {}, {}\n",
+            ew_sp, ns_sp, ew_wp, ns_wp
+        );
+        match ins.direction {
+            Direction::North => ns_wp += ins.value,
+            Direction::South => ns_wp -= ins.value,
+            Direction::East => ew_wp += ins.value,
+            Direction::West => ew_wp -= ins.value,
+            Direction::Right => {
+                // println!("{} ew {} ns, rotating {}° CW", ew_wp, ns_wp, ins.value);
+                for _ in 0..(ins.value / 90) {
+                    (ew_wp, ns_wp) = (ns_wp, -ew_wp);
                 }
+                // println!("{} ew {} ns", ew_wp, ns_wp);
             }
-            print!("{}      ", seats_now[y].iter().zip(seats_next[y].iter()).filter(|&(a, b)| a != b).count());
-            println!("{}        {}", std::str::from_utf8(&*seats_now[y]).unwrap(), std::str::from_utf8(&*seats_next[y]).unwrap());
+            Direction::Left => {
+                // println!("{} ew {} ns, rotating {}° CCW", ew_wp, ns_wp, ins.value);
+                for _ in 0..(ins.value / 90) {
+                    (ew_wp, ns_wp) = (-ns_wp, ew_wp);
+                }
+                // println!("{} ew {} ns", ew_wp, ns_wp);
+            }
+            Direction::Forward => {
+                ns_sp += ns_wp * ins.value;
+                ew_sp += ew_wp * ins.value;
+            }
         }
-        println!("\n");
-        if seats_now == seats_next { break }
-        seats_now = seats_next.clone();
-        // sleep(Duration::from_secs(1));
     }
-
-    let total_occupied: usize = seats_now.iter().fold(0, |acc, row | {
-       row.iter().filter(|seat| **seat == b'#').count() + acc
-    });
-    dbg!(total_occupied);
+    println!(
+        "Ship: {}, {}\nWaypoint: {}, {}\n",
+        ew_sp, ns_sp, ew_wp, ns_wp
+    );
+    dbg!(ns_sp.abs() + ew_sp.abs());
 }
