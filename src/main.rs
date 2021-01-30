@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 fn main() {
     let u36_max: u64 = 68719476735;
     let ins: Vec<(usize, &str)> = include_str!("input")
@@ -16,23 +18,36 @@ fn main() {
             (addr, val)
         })
         .collect();
-    let mut sys_mem: Vec<u64> = vec![0u64; ins.iter().map(|x| x.0).max().unwrap() + 1];
-    let mut global_mask: &str = "";
+    let mut sys_mem: HashMap<usize, u64> = HashMap::new();
+    let mut global_mask = "".chars().rev().enumerate();
     for instruction in ins {
         if instruction.0 == 0 {
-            global_mask = instruction.1
+            global_mask = instruction.1.chars().rev().enumerate();
         } else {
-            let mut val: u64 = instruction.1.parse().unwrap();
-            for char in global_mask.chars().enumerate() {
-                match char.1 {
-                    'X' => continue,
-                    '1' => val |= 1 << (35 - char.0),
-                    '0' => val &= !(1 << (35 - char.0)),
-                    _ => unreachable!(),
+            let mut addrs: Vec<usize> = vec![instruction.0];
+            for index in global_mask
+                .clone()
+                .filter(|(_, x)| *x == '1')
+                .map(|(idx, _)| idx)
+            {
+                addrs[0] |= 1 << index;
+            }
+            for index in global_mask
+                .clone()
+                .filter(|(_, x)| *x == 'X')
+                .map(|(idx, _)| idx)
+            {
+                for addr in addrs.clone() {
+                    addrs.push(addr ^ (1 << index))
                 }
             }
-            sys_mem[instruction.0] = val;
+
+            sys_mem.extend(
+                addrs
+                    .iter()
+                    .map(|a| (*a, instruction.1.parse::<u64>().unwrap())),
+            );
         }
     }
-    dbg!(sys_mem.iter().sum::<u64>());
+    dbg!(sys_mem.values().sum::<u64>());
 }
