@@ -2,12 +2,16 @@ fn main() {
     let input = include_str!("input.txt");
     let items: Vec<char> = input
         .lines()
-        .map(|line| {
-            let (side1, side2) = line.split_at(line.len() / 2);
-            for c1 in side1.chars() {
-                for c2 in side2.chars() {
-                    if c1 == c2 {
-                        return c1;
+        .collect::<Vec<&str>>()
+        .chunks_exact(3)
+        .map(|lines| {
+            for c1 in lines[0].chars() {
+                for c2 in lines[1].chars() {
+                    for c3 in lines[2].chars() {
+                        // Lol
+                        if (c1 == c2) && (c2 == c3) {
+                            return c1;
+                        }
                     }
                 }
             }
