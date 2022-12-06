@@ -2,27 +2,31 @@ extern crate core;
 
 use crate::RPC::{Paper, Rock, Scissors};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 enum RPC {
     Rock = 1,
     Paper = 2,
     Scissors = 3,
 }
 impl RPC {
-    fn as_int(&self) -> u32 {
-        *self as u32
+    fn as_int(&self) -> u8 {
+        *self as u8
     }
+
     fn from_int(x: u8) -> Self {
         match x {
             1 => Rock,
             2 => Paper,
             3 => Scissors,
+            0 => Scissors, // Stupid hack
             _ => panic!(),
         }
     }
-    // fn offset(&self, o: u8) -> Self {
-    //     (self.as_int() + o) % 3 + 1
-    // }
+
+    fn offset(&self, o: i8) -> Self {
+        Self::from_int((((self.as_int() as i8) + o) % 3) as u8)
+    }
+
     fn from_u8_char(c: u8) -> Self {
         if c > 87 {
             Self::from_int(c - 87)
@@ -30,23 +34,20 @@ impl RPC {
             Self::from_int(c - 64)
         }
     }
-    // fn from_pair(o: &str, g: &str) -> (Self, Self) {
-    //     let opp = match o {
-    //         "A" => Rock,
-    //         "B" => Paper,
-    //         "C" => Scissors,
-    //
-    //         _ => panic!(),
-    //     };
-    //     let you = match g {
-    //         "X" => {}
-    //         "Y" => {}
-    //         "Z" => {}
-    //         _ => panic!(),
-    //     };
-    // }
+
+    fn from_pair_pt2(o: u8, g: u8) -> (Self, Self) {
+        let opp = Self::from_u8_char(o);
+        let you = match g {
+            88 => opp.offset(-1), // X = Lose
+            89 => opp,            // Y = Tie
+            90 => opp.offset(1),  // Z = Win
+            _ => panic!(),
+        };
+        (opp, you)
+    }
+
     fn score(&self, other: &Self) -> u32 {
-        self.as_int()
+        self.as_int() as u32
             + match (self, other) {
                 (Rock, Rock) => 3,
                 (Paper, Paper) => 3,
@@ -67,11 +68,13 @@ fn main() {
 
     for line in input.lines() {
         let mut inst_pair = line.bytes();
-
-        let opp = RPC::from_u8_char(inst_pair.next().unwrap());
-        let you = RPC::from_u8_char(inst_pair.nth(1).unwrap());
-        rounds.push((opp, you));
+        rounds.push(RPC::from_pair_pt2(
+            inst_pair.next().unwrap(),
+            inst_pair.nth(1).unwrap(),
+        ));
     }
+
+    dbg!(&rounds);
 
     dbg!(rounds.iter().map(|(opp, you)| you.score(opp)).sum::<u32>());
 }
