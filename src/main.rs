@@ -13,8 +13,8 @@ fn main() {
             let r2 = r2s.next().unwrap().parse::<u8>().unwrap()
                 ..=r2s.next().unwrap().parse::<u8>().unwrap();
 
-            (r1.contains(r2.start()) && r1.contains(r2.end()))
-                || (r2.contains(r1.start()) && r2.contains(r1.end()))
+            (r1.contains(r2.start()) || r1.contains(r2.end()))
+                || (r2.contains(r1.start()) || r2.contains(r1.end()))
         })
         .map(|b| b as u32)
         .sum();
