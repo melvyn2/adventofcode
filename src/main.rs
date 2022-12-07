@@ -6,7 +6,7 @@ fn main() {
         .chars()
         .enumerate()
         .collect::<Vec<(usize, char)>>()
-        .windows(4)
+        .windows(14)
     {
         if c.iter()
             .cloned()
