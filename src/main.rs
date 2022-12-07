@@ -1,34 +1,22 @@
 fn main() {
     let input = include_str!("input.txt");
-    let items: Vec<char> = input
+    let items: u32 = input
         .lines()
-        .collect::<Vec<&str>>()
-        .chunks_exact(3)
-        .map(|lines| {
-            for c1 in lines[0].chars() {
-                for c2 in lines[1].chars() {
-                    for c3 in lines[2].chars() {
-                        // Lol
-                        if (c1 == c2) && (c2 == c3) {
-                            return c1;
-                        }
-                    }
-                }
-            }
-            unreachable!()
+        .map(|line| {
+            let mut split = line.split(',');
+            let (mut r1s, mut r2s) = (
+                split.next().unwrap().split('-'),
+                split.next().unwrap().split('-'),
+            );
+            let r1 = r1s.next().unwrap().parse::<u8>().unwrap()
+                ..=r1s.next().unwrap().parse::<u8>().unwrap();
+            let r2 = r2s.next().unwrap().parse::<u8>().unwrap()
+                ..=r2s.next().unwrap().parse::<u8>().unwrap();
+
+            (r1.contains(r2.start()) && r1.contains(r2.end()))
+                || (r2.contains(r1.start()) && r2.contains(r1.end()))
         })
-        .collect();
-    let priorities: Vec<u32> = items
-        .iter()
-        .map(|&c| {
-            if c.is_lowercase() {
-                (c as u32) - 96
-            } else {
-                (c as u32) - 38
-            }
-        })
-        .collect();
-    dbg!(&items);
-    dbg!(&priorities);
-    dbg!(priorities.iter().sum::<u32>());
+        .map(|b| b as u32)
+        .sum();
+    dbg!(items);
 }
