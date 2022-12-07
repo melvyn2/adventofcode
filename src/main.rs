@@ -10,22 +10,21 @@ fn main() {
             stacks[idx / 4].insert(0, c);
         }
     }
-    let mut moves: Vec<(usize, usize)> = vec![];
+    let mut moves: Vec<(usize, usize, usize)> = vec![];
     for line in input_s.next().unwrap().lines() {
         let mut words = line.split_whitespace();
         let ct = words.nth(1).unwrap().parse::<usize>().unwrap();
         let src = words.nth(1).unwrap().parse::<usize>().unwrap();
         let dest = words.nth(1).unwrap().parse::<usize>().unwrap();
-        for _ in 0..ct {
-            moves.push((src, dest));
-        }
+        moves.push((src, dest, ct));
     }
-    for (src, dest) in moves {
-        let i = stacks[src - 1].pop().unwrap();
-        stacks[dest - 1].push(i);
+    for (src, dest, ct) in moves {
+        let src_range = stacks[src - 1].len() - ct..stacks[src - 1].len();
+        let mut itms = stacks[src - 1].drain(src_range).collect();
+        stacks[dest - 1].append(&mut itms);
     }
     dbg!(stacks
         .iter()
-        .map(|s| s.last().unwrap().clone())
+        .map(|s| *s.last().unwrap())
         .collect::<String>());
 }
