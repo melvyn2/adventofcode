@@ -36,7 +36,13 @@ fn main() {
         }
     }
 
-    let sum = fs
+    let size_to_free = 30000000
+        - (70000000
+            - fs.values()
+                .map(|files| files.iter().map(|(_, s)| s).sum::<usize>())
+                .sum::<usize>());
+
+    let min = fs
         .keys()
         .clone()
         .map(|dir| {
@@ -45,8 +51,9 @@ fn main() {
                 .map(|(_, files)| files.iter().map(|(_, s)| s).sum::<usize>())
                 .sum::<usize>()
         })
-        .filter(|&s| s <= 100000)
-        .sum::<usize>();
+        .filter(|&s| s >= size_to_free)
+        .min()
+        .unwrap();
 
-    dbg!(sum);
+    dbg!(min);
 }
