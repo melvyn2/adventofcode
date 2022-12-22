@@ -22,7 +22,7 @@ fn successors(
                     'S' => 'a',
                     c => c,
                 };
-                if cand as i32 - pos.2 as i32 <= 1 {
+                if cand as i32 - pos.2 as i32 >= -1 {
                     res.push(((cand_pos.0, cand_pos.1, cand), 1));
                     dbg_map[cand_pos.0 as usize][cand_pos.1 as usize] = cand.to_ascii_uppercase();
                 }
@@ -62,9 +62,9 @@ fn main() {
     dbg!(&start, &goal);
 
     let a = dijkstra(
-        &start,
+        &goal,
         |pos| successors(pos, &map, &mut dbg_map),
-        |&pos| pos == goal,
+        |&pos| pos.2 == 'a',
     );
 
     for l in dbg_map {
