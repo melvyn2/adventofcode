@@ -73,19 +73,22 @@ fn main() {
         .collect::<Vec<u8>>();
 
     let mut positions: BTreeSet<usize> = BTreeSet::new();
+    let mut acc = 0;
     // Find all symbols, and collect all surrounding leftmost-number fragments
-    for (pos, _) in plane
-        .iter()
-        .enumerate()
-        .filter(|(_, &b)| !(b as char).is_numeric() && b != b'.')
-    {
+    for (pos, _) in plane.iter().enumerate().filter(|(_, &b)| b == b'*') {
         find_numeric(pos, &plane, line_len, &mut positions);
+        if positions.len() == 2 {
+            acc +=
+                expand_right_and_collect_numeric(positions.pop_first().unwrap(), &plane, line_len)
+                    * expand_right_and_collect_numeric(
+                        positions.pop_first().unwrap(),
+                        &plane,
+                        line_len,
+                    );
+        } else {
+            positions.clear()
+        }
     }
-
-    let acc: usize = positions
-        .into_iter()
-        .map(|pos| expand_right_and_collect_numeric(pos, &plane, line_len))
-        .sum();
 
     dbg!(acc);
 }
