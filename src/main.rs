@@ -1,41 +1,56 @@
+use std::collections::HashMap;
+use std::ops::Range;
+
 fn main() {
     let input = include_str!("input.txt");
 
-    let map = input
-        .lines()
-        .map(|l| {
-            let (_game_str, nums) = l.split_once(": ").unwrap();
+    let mut sec = input.split("\n\n");
 
-            let (wins_str, given_str) = nums.split_once(" | ").unwrap();
-            let winning = wins_str
-                .split(' ')
-                .filter(|&s| !s.is_empty())
-                .map(|n| n.parse().unwrap())
-                .collect::<Vec<u32>>();
-            let given = given_str
-                .split(' ')
-                .filter(|&s| !s.is_empty())
-                .map(|n| n.parse().unwrap())
-                .collect::<Vec<u32>>();
-            let wins = given.iter().filter(|&n| winning.contains(n)).count();
-            wins
+    let seeds = sec
+        .next()
+        .unwrap()
+        .split_once(": ")
+        .unwrap()
+        .1
+        .split(' ')
+        .map(|s| s.parse().unwrap())
+        .collect::<Vec<u64>>();
+
+    let maps = sec
+        .map(|m| {
+            m.lines()
+                .skip(1)
+                .map(|l| {
+                    let v = l
+                        .split(' ')
+                        .map(|n| n.parse::<u64>().unwrap())
+                        .collect::<Vec<u64>>();
+                    (v[1]..v[1] + v[2], (v[0] as i64 - v[1] as i64))
+                })
+                .collect::<HashMap<Range<u64>, i64>>()
         })
-        .collect::<Vec<usize>>();
+        .collect::<Vec<HashMap<_, _>>>();
 
-    let mut acc = 0;
-    let mut cur = vec![1; map.len()];
-    let mut next = vec![0; map.len()];
-
-    while cur.iter().sum::<usize>() > 0 {
-        for (game, &wins) in map.iter().enumerate() {
-            acc += cur[game];
-            for i in next.iter_mut().skip(game + 1).take(wins) {
-                *i += cur[game];
+    let res = seeds
+        .iter()
+        .map(|&s| {
+            let mut c = s as i64;
+            for map in &maps {
+                let offset = map
+                    .iter()
+                    .find_map(|(r, &o)| {
+                        if r.contains(&(c as u64)) {
+                            Some(o)
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or(0);
+                c += offset;
             }
-        }
-        cur = next;
-        next = vec![0; map.len()];
-    }
+            c
+        })
+        .collect::<Vec<i64>>();
 
-    dbg!(acc);
+    dbg!(res.iter().min().unwrap());
 }
