@@ -3,13 +3,12 @@ use std::collections::BTreeMap;
 use std::fmt::{Formatter, Write};
 
 const CARD_CHARS: [char; 13] = [
-    'A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2',
+    'A', 'K', 'Q', 'T', '9', '8', '7', '6', '5', '4', '3', '2', 'J',
 ];
 const CARDS: [Card; 13] = [
     Card::Ace,
     Card::King,
     Card::Queen,
-    Card::Jack,
     Card::Tee,
     Card::Nine,
     Card::Eight,
@@ -19,6 +18,7 @@ const CARDS: [Card; 13] = [
     Card::Four,
     Card::Three,
     Card::Two,
+    Card::Joker,
 ];
 
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
@@ -26,7 +26,6 @@ enum Card {
     Ace,
     King,
     Queen,
-    Jack,
     Tee,
     Nine,
     Eight,
@@ -36,6 +35,7 @@ enum Card {
     Four,
     Three,
     Two,
+    Joker,
 }
 impl Card {
     fn rank(&self) -> usize {
@@ -100,6 +100,13 @@ impl Hand {
         let mut map = BTreeMap::new();
         for card in self.inner {
             map.insert(card, 1 + map.get(&card).unwrap_or(&0));
+        }
+        if let Some((_, joker_cnt)) = map.remove_entry(&Card::Joker) {
+            let (max_card, max_cnt) = map
+                .iter()
+                .max_by_key(|(_, &num)| num)
+                .unwrap_or((&Card::Joker, &0));
+            map.insert(*max_card, max_cnt + joker_cnt);
         }
         match map.len() {
             1 => 7,
