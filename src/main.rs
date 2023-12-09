@@ -1,47 +1,187 @@
-fn main() {
-    let input = include_str!("input.txt").trim().split_once('\n').unwrap();
+use std::cmp::Ordering;
+use std::collections::BTreeMap;
+use std::fmt::{Formatter, Write};
 
-    let time = input
-        .0
-        .split_once(": ")
-        .unwrap()
-        .1
-        .replace(' ', "")
-        .parse::<u64>()
-        .unwrap();
-    let record = input
-        .1
-        .split_once(": ")
-        .unwrap()
-        .1
-        .replace(' ', "")
-        .parse::<u64>()
-        .unwrap();
+const CARD_CHARS: [char; 13] = [
+    'A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2',
+];
+const CARDS: [Card; 13] = [
+    Card::Ace,
+    Card::King,
+    Card::Queen,
+    Card::Jack,
+    Card::Tee,
+    Card::Nine,
+    Card::Eight,
+    Card::Seven,
+    Card::Six,
+    Card::Five,
+    Card::Four,
+    Card::Three,
+    Card::Two,
+];
 
-    let res = {
-        // Within a time limit l, the distance traveled, where p <= l is the time of release of the button,
-        // is p(l - p) or lp - p^2. If the record distance is r, lp - p^2 = r means
-        // p^2 - lp + r = 0, and so p = (-l ± sqrt(l^2 - 4r))/2.
-        // We are only trying to find the range of solutions or p2-p1
-        let l = time as f64;
-        let r = record as f64;
-        let p_big = (l + (l.powf(2.0) - (4.0 * r)).sqrt()) / 2.0;
-        let p_small = (l - (l.powf(2.0) - (4.0 * r)).sqrt()) / 2.0;
+#[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
+enum Card {
+    Ace,
+    King,
+    Queen,
+    Jack,
+    Tee,
+    Nine,
+    Eight,
+    Seven,
+    Six,
+    Five,
+    Four,
+    Three,
+    Two,
+}
+impl Card {
+    fn rank(&self) -> usize {
+        CARDS
+            .iter()
+            .enumerate()
+            .find_map(|(i, c)| {
+                if c == self {
+                    Some(CARDS.len() - i)
+                } else {
+                    None
+                }
+            })
+            .unwrap()
+    }
+}
+impl From<char> for Card {
+    fn from(value: char) -> Self {
+        CARD_CHARS
+            .iter()
+            .zip(CARDS.iter())
+            .find_map(|(&v, &r)| if value == v { Some(r) } else { None })
+            .unwrap()
+    }
+}
+impl From<Card> for char {
+    fn from(value: Card) -> Self {
+        CARD_CHARS
+            .iter()
+            .zip(CARDS.iter())
+            .find_map(|(&r, &v)| if value == v { Some(r) } else { None })
+            .unwrap()
+    }
+}
+impl PartialOrd<Self> for Card {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for Card {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.rank().cmp(&other.rank())
+    }
+}
 
-        // If the record thresholds land on a whole millisecond, we can't use that interval
-        // and have to consider the adjacent qualifying times. Else just round towards the center.
-        // We only do this for p_big because chances are, if one root is whole, both are,
-        // and so you'd have (p_big - 1) - (p_small + 1) + 1
-        // = (p_big - 1) - p_small
-        // Otherwise, floor(p_big) - ceil(p_small) + 1 = floor(p_big) - floor(p_small)
-        let i_big = if p_big % 10.0 < 0.0001 {
-            p_big as u64 - 1
+#[derive(PartialEq, Eq, Clone, Hash, Debug)]
+struct Hand {
+    inner: [Card; 5],
+}
+impl Hand {
+    fn new(v: String) -> Option<Self> {
+        let inner = v
+            .chars()
+            .map(Card::from)
+            .collect::<Vec<_>>()
+            .try_into()
+            .ok()?;
+        Some(Self { inner })
+    }
+
+    fn hand_type(&self) -> usize {
+        let mut map = BTreeMap::new();
+        for card in self.inner {
+            map.insert(card, 1 + map.get(&card).unwrap_or(&0));
+        }
+        match map.len() {
+            1 => 7,
+            2 => match map.pop_first().unwrap().1 {
+                1 | 4 => 6,
+                2 | 3 => 5,
+                _ => unreachable!(),
+            },
+            3 => match map.pop_first().unwrap().1 {
+                1 => match map.pop_first().unwrap().1 {
+                    1 | 3 => 4,
+                    2 => 3,
+                    _ => unreachable!(),
+                },
+                3 => 4,
+                2 => 3,
+                _ => unreachable!(),
+            },
+            4 => 2,
+            5 => 1,
+            _ => unreachable!(),
+        }
+    }
+}
+impl PartialOrd<Self> for Hand {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for Hand {
+    fn cmp(&self, other: &Self) -> Ordering {
+        let hand_type = self.hand_type().cmp(&other.hand_type());
+        if hand_type == Ordering::Equal {
+            self.inner
+                .iter()
+                .zip(other.inner)
+                .find_map(|(&s, o)| {
+                    let ord = s.cmp(&o);
+                    if ord != Ordering::Equal {
+                        Some(ord)
+                    } else {
+                        None
+                    }
+                })
+                .unwrap_or(Ordering::Equal)
         } else {
-            p_big as u64
-        };
-        let i_small = p_small.floor() as u64;
-        i_big - i_small
-    };
+            hand_type
+        }
+    }
+}
+impl std::fmt::Display for Hand {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        for c in self.inner {
+            f.write_char(c.into())?;
+        }
+        Ok(())
+    }
+}
 
-    dbg!(res);
+fn main() {
+    let input = include_str!("input.txt");
+
+    let hands = input
+        .lines()
+        .map(|l| {
+            let (h_str, b_str) = l.split_once(' ').unwrap();
+            let bet = b_str.parse::<usize>().unwrap();
+            let hand = Hand::new(h_str.to_string()).unwrap();
+            (hand, bet)
+        })
+        .collect::<BTreeMap<Hand, usize>>()
+        .iter()
+        .enumerate()
+        .fold(0, |acc, (idx, (hand, bid))| {
+            // println!(
+            //     "hand {} bid {} rank {} = {}",
+            //     hand,
+            //     bid,
+            //     idx + 1,
+            //     (idx + 1) * bid
+            // );
+            acc + (idx + 1) * bid
+        });
+    dbg!(hands);
 }
