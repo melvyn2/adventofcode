@@ -1,5 +1,7 @@
 use std::ops::Range;
 
+use rayon::prelude::*;
+
 fn main() {
     let input = include_str!("input.txt");
 
@@ -37,6 +39,7 @@ fn main() {
         .into_iter()
         .map(|seed_range| {
             seed_range
+                .into_par_iter()
                 .map(|s| {
                     let mut c = s as i64;
                     for map in &maps {
