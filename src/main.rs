@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::ops::Range;
 
 fn main() {
@@ -14,7 +13,10 @@ fn main() {
         .1
         .split(' ')
         .map(|s| s.parse().unwrap())
-        .collect::<Vec<u64>>();
+        .collect::<Vec<u64>>()
+        .chunks(2)
+        .map(|s| s[0]..s[0] + s[1])
+        .collect::<Vec<Range<u64>>>();
 
     let maps = sec
         .map(|m| {
@@ -27,30 +29,36 @@ fn main() {
                         .collect::<Vec<u64>>();
                     (v[1]..v[1] + v[2], (v[0] as i64 - v[1] as i64))
                 })
-                .collect::<HashMap<Range<u64>, i64>>()
+                .collect::<Vec<(Range<u64>, i64)>>()
         })
-        .collect::<Vec<HashMap<_, _>>>();
+        .collect::<Vec<Vec<(Range<u64>, i64)>>>();
 
     let res = seeds
-        .iter()
-        .map(|&s| {
-            let mut c = s as i64;
-            for map in &maps {
-                let offset = map
-                    .iter()
-                    .find_map(|(r, &o)| {
-                        if r.contains(&(c as u64)) {
-                            Some(o)
-                        } else {
-                            None
-                        }
-                    })
-                    .unwrap_or(0);
-                c += offset;
-            }
-            c
+        .into_iter()
+        .map(|seed_range| {
+            seed_range
+                .map(|s| {
+                    let mut c = s as i64;
+                    for map in &maps {
+                        let offset = map
+                            .iter()
+                            .find_map(|(r, o)| {
+                                if r.contains(&(c as u64)) {
+                                    Some(*o)
+                                } else {
+                                    None
+                                }
+                            })
+                            .unwrap_or(0);
+                        c += offset;
+                    }
+                    c
+                })
+                .min()
+                .unwrap()
         })
-        .collect::<Vec<i64>>();
+        .min()
+        .unwrap();
 
-    dbg!(res.iter().min().unwrap());
+    dbg!(res);
 }
