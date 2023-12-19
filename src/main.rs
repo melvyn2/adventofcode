@@ -16,10 +16,12 @@ fn main() {
     let mut acc = 0;
     for hist in value_histories {
         let mut inner = 0;
+        let mut coeff = 1;
         let mut diffs = hist.clone();
 
         while diffs.iter().any(|&x| x != 0) {
-            inner += diffs.last().unwrap();
+            inner += coeff * diffs[0];
+            coeff *= -1;
             let new = diffs
                 .iter()
                 .map_windows(|[&x, &y]| y - x)
